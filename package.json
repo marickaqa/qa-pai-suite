@@ -1,0 +1,20 @@
+{
+  "name": "qa-pai-suite",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test:ui": "playwright test",
+    "test:ui:headed": "playwright test --headed",
+    "test:ui:debug": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.0",
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}
