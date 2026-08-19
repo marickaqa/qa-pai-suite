@@ -18,3 +18,36 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
+
+  ui-tests:
+    name: SaaS UI tests (live dev)
+    needs: typecheck
+    # Only on pushes to main and manual runs — NOT on pull_request. Fork PRs
+    # don't receive secrets (login would fail with a misleading red X), and we
+    # don't want the live-backend login firing on every PR.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Serialize live runs: the test account's active-org is server-side state,
+    # so two overlapping runs would race it. A newer run cancels an older one.
+    concurrency:
+      group: live-ui-tests
+      cancel-in-progress: true
+    env:
+      SAAS_URL: ${{ secrets.SAAS_URL }}
+      SAAS_EMAIL: ${{ secrets.SAAS_EMAIL }}
+      SAAS_PASSWORD: ${{ secrets.SAAS_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright browser (chromium)
+        run: npx playwright install --with-deps chromium
+      - name: Run SaaS UI tests
+        run: npx playwright test
+      # DELIBERATELY NO artifact upload. Playwright traces and the saved session
+      # (reports/saas-session.json) contain the live auth token, and artifacts on
+      # a public repo are world-readable. On CI failure, reproduce locally.
