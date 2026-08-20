@@ -6,29 +6,33 @@ const orgTrigger = (page: Page) =>
 /**
  * Force the active org to noctocode.dev, then navigate.
  *
- * Guards against the two ways the SaaS SPA isn't ready when we act:
- *   1. a full-viewport boot/transition overlay (absolute inset-0 / min-h-screen,
- *      pointer-events-auto) that intercepts clicks while it fades;
- *   2. the org dropdown rows not being rendered the instant the menu opens.
- * We wait out both instead of racing them.
+ * Guards the two ways the SaaS SPA isn't ready when we act:
+ *   1. the authenticated shell (org trigger) not rendering on first load — a
+ *      slow/misrouted boot; we reload once before giving up;
+ *   2. a full-viewport boot/transition overlay intercepting the org click;
+ *   3. the org dropdown rows not being rendered the instant the menu opens.
  */
 export async function forceOrg(page: Page, target = /noctocode\.dev/i) {
   await page.goto('/dashboard/overview')
 
   const trigger = orgTrigger(page)
-  await expect(trigger).toBeVisible({ timeout: 30000 })
+  // (1) Reload once if the shell didn't render, so this isn't intermittent flake
+  // in every caller.
+  try {
+    await expect(trigger).toBeVisible({ timeout: 20000 })
+  } catch {
+    await page.reload()
+    await expect(trigger).toBeVisible({ timeout: 20000 })
+  }
 
-  // (1) Wait for any click-blocking full-screen overlay to go away before we
-  // interact. These are the pointer-events-auto scrims seen intercepting clicks.
+  // (2) Wait for any click-blocking full-screen overlay to detach.
   await settleOverlays(page)
 
   if (target.test((await trigger.textContent()) || '')) return // already on target
 
   await trigger.click()
 
-  // (2) The dropdown must actually render its rows before we look for the org.
-  // Anchor on the OTHER org's name being present too — proves the menu populated,
-  // not just opened. (Trump Media is the account's second org.)
+  // (3) The dropdown must actually render its rows before we look for the org.
   await expect(
     page.getByText(/trump media/i).or(page.getByText(target)).first(),
     'org dropdown did not populate its rows'
@@ -53,15 +57,12 @@ export async function forceOrg(page: Page, target = /noctocode\.dev/i) {
 }
 
 /**
- * Wait for click-intercepting full-screen overlays to detach. Both the boot
- * splash (min-h-screen) and the inset-0/pt-32 scrim match this. If none is
- * present, returns immediately — never fails the run on a missing overlay.
+ * Wait for click-intercepting full-screen overlays to detach. Tolerates none.
  */
 async function settleOverlays(page: Page) {
   const overlay = page.locator(
     'div.pointer-events-auto.absolute.inset-0, div.pointer-events-auto.min-h-screen'
   )
-  // If a click-blocking overlay is present, wait for it to detach. Tolerate none.
   if ((await overlay.count().catch(() => 0)) > 0) {
     await overlay.first().waitFor({ state: 'detached', timeout: 15000 }).catch(() => {})
   }
