@@ -145,7 +145,18 @@ test.describe('Core — SaaS Auth (logout)', () => {
     test.use({ storageState: { cookies: [], origins: [] } })
 
     async function loginAndSettle(page: Page) {
-        await loginFresh(page)
+        // Dedicated throwaway account — NOT the shared SAAS_EMAIL. Logging this one
+        // out invalidates only its own token, never the shared session file's token
+        // that every later spec depends on.
+        const email = process.env.SAAS_LOGOUT_EMAIL
+        const password = process.env.SAAS_LOGOUT_PASSWORD
+        test.skip(!email || !password, 'SAAS_LOGOUT_EMAIL/PASSWORD not set')
+
+        await page.goto('/login')
+        await page.locator('input[name="email"]').fill(email!)
+        await page.locator('input[name="password"]').fill(password!)
+        await page.locator('button[type="submit"]').click()
+        await page.waitForURL((url) => !url.toString().includes('login'), { timeout: 30000 })
         await expect(page.getByRole('button', { name: /log out/i })).toBeVisible({ timeout: 30000 })
     }
 

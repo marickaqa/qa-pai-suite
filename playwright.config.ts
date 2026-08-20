@@ -18,7 +18,7 @@ function required(name: string): string {
   if (!value) {
     throw new Error(
       `${name} is not set. Copy .env.example to .env and fill it in ` +
-        `(or export ${name} in CI).`
+      `(or export ${name} in CI).`
     )
   }
   return value
@@ -45,6 +45,9 @@ export default defineConfig({
     actionTimeout: 30000,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    launchOptions: {
+      slowMo: process.env.SLOWMO ? Number(process.env.SLOWMO) : 0,
+    },
   },
   projects: [
     {
