@@ -19,12 +19,12 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
 
-  ui-tests:
+   ui-tests:
     name: SaaS UI tests (live dev)
     needs: typecheck
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     concurrency:
       group: live-ui-tests
       cancel-in-progress: true
@@ -32,6 +32,8 @@ jobs:
       SAAS_URL: ${{ secrets.SAAS_URL }}
       SAAS_EMAIL: ${{ secrets.SAAS_EMAIL }}
       SAAS_PASSWORD: ${{ secrets.SAAS_PASSWORD }}
+      SAAS_LOGOUT_EMAIL: ${{ secrets.SAAS_LOGOUT_EMAIL }}
+      SAAS_LOGOUT_PASSWORD: ${{ secrets.SAAS_LOGOUT_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -56,4 +58,6 @@ jobs:
         run: npx playwright install chromium
 
       - name: Run SaaS UI tests
-        run: npx playwright test
+        # global per-test timeout so a hung hydration fails fast (60s) instead of
+        # burning the whole budget; --max-failures stops a cascade early.
+        run: npx playwright test --timeout=60000 --max-failures=8
