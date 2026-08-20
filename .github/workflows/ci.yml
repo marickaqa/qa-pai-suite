@@ -19,7 +19,7 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
 
-   ui-tests:
+  ui-tests:
     name: SaaS UI tests (live dev)
     needs: typecheck
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
@@ -58,6 +58,6 @@ jobs:
         run: npx playwright install chromium
 
       - name: Run SaaS UI tests
-        # global per-test timeout so a hung hydration fails fast (60s) instead of
-        # burning the whole budget; --max-failures stops a cascade early.
+        # per-test timeout so a hung hydration fails fast (60s); --max-failures
+        # stops a cascade early so the run completes instead of hanging.
         run: npx playwright test --timeout=60000 --max-failures=8
