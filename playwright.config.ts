@@ -29,7 +29,7 @@ export default defineConfig({
   timeout: 60000,
   // More retries in CI to absorb transient dev-backend slowness; locally keep
   // it at 0 for fast, honest feedback while developing.
-  retries: process.env.CI ? 3 : 0,
+  retries: process.env.CI ? 1 : 0,
   // Serial. The SaaS active-org is server-side state keyed to one token, and
   // every spec shares one saved session — parallel workers would race it.
   workers: 1,
